@@ -6,9 +6,17 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
+    }
+}
+
 dependencies {
     compileOnly(libs.echo.common)
     compileOnly(libs.kotlin.stdlib)
+    compileOnly(libs.okhttp)
+    compileOnly(libs.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
@@ -40,10 +48,15 @@ val extAuthorUrl: String? by project
 val extRepoUrl: String? by project
 val extUpdateUrl: String? by project
 
+
 val gitHash = execute("git", "rev-parse", "HEAD").take(7)
-val gitCount = execute("git", "rev-list", "--count", "HEAD").toInt()
+val gitCount = execute("git", "rev-list", "--count", "HEAD").toIntOrNull() ?: 0
 val verCode = gitCount
 val verName = "v$gitHash"
+
+println("DEBUG: extId = $extId")
+println("DEBUG: verCode = $verCode")
+println("DEBUG: verName = $verName")
 
 publishing {
     publications {
@@ -59,6 +72,7 @@ publishing {
 
 tasks {
     shadowJar {
+        from(project.configurations.getByName("runtimeClasspath"))
         archiveBaseName.set(extId)
         archiveVersion.set(verName)
         manifest {
@@ -88,4 +102,4 @@ tasks {
 
 fun execute(vararg command: String): String = providers.exec {
     commandLine(*command)
-}.standardOutput.asText.get().trim()
+}.standardOutput.asText.orNull?.trim() ?: ""
